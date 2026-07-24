@@ -124,14 +124,27 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 1
 .agent-status.offline { color: var(--danger); border-color: #5b2a2a; background: #271414; }
 
 /* ---------- Pairing banner ---------- */
-.pair-banner { background: var(--bg-soft); border-bottom: 1px solid var(--border); padding: 18px 22px; }
-.pair-inner { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; max-width: 1100px; margin: 0 auto; }
-.pair-inner h3 { margin: 0 0 4px; }
-.pair-inner p { margin: 0; color: var(--muted); font-size: 14px; }
-.pair-actions { display: flex; gap: 10px; }
-.pair-code-box { max-width: 1100px; margin: 16px auto 0; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+.pair-banner { background: var(--bg-soft); border-bottom: 1px solid var(--border); padding: 22px; }
+.pair-header { max-width: 1100px; margin: 0 auto 16px; }
+.pair-header h3 { margin: 0 0 4px; }
+.pair-header p { margin: 0; color: var(--muted); font-size: 14px; }
+.onboard-steps { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.onboard-step { display: flex; gap: 14px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+.onboard-step .step-num { flex: 0 0 auto; margin-bottom: 0; }
+.step-body { flex: 1; min-width: 0; }
+.step-body h4 { margin: 0 0 6px; font-size: 16px; }
+.step-body .hint { margin: 0 0 12px; }
+.pair-downloads { display: flex; flex-direction: column; gap: 10px; }
+.dl-btn { display: inline-block; }
+.dl-others { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.dl-others a { font-size: 13px; color: var(--muted); text-decoration: none; }
+.dl-others a:hover { color: var(--text); }
+.hint-link { display: inline-block; margin-top: 10px; font-size: 13px; color: var(--accent); text-decoration: none; }
+.pair-code-box { margin: 14px 0 0; background: #0e1024; border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
 .pair-code-box p { margin: 0 0 8px; color: var(--muted); font-size: 14px; }
-.pair-code { font-size: 32px; font-weight: 700; letter-spacing: 4px; font-family: ui-monospace, monospace; color: var(--accent-2); }
+.pair-code { font-size: 30px; font-weight: 700; letter-spacing: 4px; font-family: ui-monospace, monospace; color: var(--accent-2); }
+.cta-note { color: var(--muted); font-size: 13px; margin: -18px 0 40px; }
+@media (max-width: 720px) { .onboard-steps { grid-template-columns: 1fr; } }
 
 /* ---------- Progress ---------- */
 .progress { display: flex; align-items: center; gap: 12px; padding: 10px 22px; background: var(--bg-soft); border-bottom: 1px solid var(--border); }

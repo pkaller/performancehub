@@ -10,7 +10,24 @@ const state = {
   pairPoll: null,
   currentCamera: null,
   camLiveTimer: null,
+  repo: 'pkaller/performancehub',
+  asset: null, // detected binary filename for this OS
 };
+
+// Agent binaries (must match the release asset names + download page).
+const ASSETS = [
+  { key: 'win', label: 'Windows', file: 'performancehub-agent-win-x64.exe', icon: '🪟' },
+  { key: 'macos-arm', label: 'macOS (Apple Silicon)', file: 'performancehub-agent-macos-arm64', icon: '🍎' },
+  { key: 'macos-x64', label: 'macOS (Intel)', file: 'performancehub-agent-macos-x64', icon: '🍎' },
+  { key: 'linux', label: 'Linux', file: 'performancehub-agent-linux-x64', icon: '🐧' },
+];
+function detectOs() {
+  const p = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
+  const ua = navigator.userAgent;
+  if (/Win/i.test(p) || /Windows/i.test(ua)) return 'win';
+  if (/Mac/i.test(p) || /Mac OS X/i.test(ua)) return /arm|apple/i.test(ua) ? 'macos-arm' : 'macos-x64';
+  return 'linux';
+}
 
 // ---------- helpers ----------
 function toast(msg, isError = false) {
@@ -46,11 +63,36 @@ async function init() {
     return;
   }
   renderUser(me.user);
+  await setupDownloads();
   document.getElementById('scan-btn').addEventListener('click', startScan);
   document.getElementById('logout').addEventListener('click', logout);
   document.getElementById('pair-btn').addEventListener('click', requestPairCode);
   wireCameraModal();
   connectWs();
+}
+
+// Render OS-aware download buttons into the pairing banner (post-login flow).
+async function setupDownloads() {
+  try {
+    const cfg = await (await fetch('/api/config')).json();
+    if (cfg.repo) state.repo = cfg.repo;
+  } catch (_) {}
+
+  const base = `https://github.com/${state.repo}/releases/latest/download`;
+  const detected = detectOs();
+  const primary = ASSETS.find((a) => a.key === detected) || ASSETS[0];
+  state.asset = primary.file;
+
+  const others = ASSETS.filter((a) => a.key !== primary.key);
+  const box = document.getElementById('pair-downloads');
+  if (!box) return;
+  box.innerHTML = `
+    <a class="btn btn-primary dl-btn" href="${base}/${primary.file}" download>
+      ${primary.icon} Download for ${primary.label}
+    </a>
+    <div class="dl-others">
+      ${others.map((a) => `<a href="${base}/${a.file}" download>${a.icon} ${a.label}</a>`).join('')}
+    </div>`;
 }
 
 function renderUser(user) {
@@ -172,8 +214,10 @@ async function requestPairCode() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Failed');
     document.getElementById('pair-code').textContent = data.code;
+    const file = state.asset || 'performancehub-agent';
+    const runner = file.endsWith('.exe') ? file : `./${file}`;
     document.getElementById('pair-cmd').textContent =
-      `./performancehub-agent --server ${location.origin} --pair ${data.code}`;
+      `${runner} --server ${location.origin} --pair ${data.code}`;
     document.getElementById('pair-code-box').hidden = false;
   } catch (e) {
     toast(e.message, true);

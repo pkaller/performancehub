@@ -20,21 +20,38 @@
 
     <!-- Pairing / onboarding banner -->
     <section id="pair-banner" class="pair-banner" hidden>
-      <div class="pair-inner">
-        <div>
-          <h3>Connect your network</h3>
-          <p>No local agent is connected yet. Install the agent and pair it to start scanning.</p>
-        </div>
-        <div class="pair-actions">
-          <a class="btn" href="/download.html">Download agent</a>
-          <button id="pair-btn" class="btn btn-primary">Pair a new agent</button>
-        </div>
+      <div class="pair-header">
+        <h3>Connect your network</h3>
+        <p>No local agent is connected yet. Two quick steps and you're scanning.</p>
       </div>
-      <div id="pair-code-box" class="pair-code-box" hidden>
-        <p>Run the agent with this code (valid ~10 min):</p>
-        <div class="pair-code" id="pair-code">————</div>
-        <pre><code id="pair-cmd">./performancehub-agent --pair ————</code></pre>
-        <p class="hint">Waiting for the agent to connect… this updates automatically.</p>
+
+      <div class="onboard-steps">
+        <!-- Step 1: download -->
+        <div class="onboard-step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <h4>Download the agent</h4>
+            <p class="hint">Runs on any always-on machine on your LAN (laptop, mini-PC, Raspberry Pi). No install needed — it's a single file.</p>
+            <div id="pair-downloads" class="pair-downloads"></div>
+            <a id="all-platforms" class="hint-link" href="/download.html">All platforms &amp; instructions →</a>
+          </div>
+        </div>
+
+        <!-- Step 2: pair -->
+        <div class="onboard-step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <h4>Pair it with your account</h4>
+            <p class="hint">Get a one-time code, then run the downloaded agent with it.</p>
+            <button id="pair-btn" class="btn btn-primary">Get pairing code</button>
+            <div id="pair-code-box" class="pair-code-box" hidden>
+              <p>Run the agent with this code (valid ~10 min):</p>
+              <div class="pair-code" id="pair-code">————</div>
+              <pre><code id="pair-cmd">./performancehub-agent --pair ————</code></pre>
+              <p class="hint">Waiting for the agent to connect… this updates automatically.</p>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 

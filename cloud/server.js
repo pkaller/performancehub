@@ -41,12 +41,18 @@ registerAuthRoutes(app);
 const publicDir = path.join(__dirname, 'public');
 
 // The dashboard requires login; everything else (landing, login, downloads) is public.
-app.get('/app.html', (req, res) => {
-  if (req.isAuthenticated && req.isAuthenticated()) {
-    return res.sendFile(path.join(publicDir, 'app.html'));
-  }
-  res.redirect('/login.html');
-});
+// Pages that require login: the dashboard and the agent download page.
+// (Downloading the agent is part of the post-login connect flow.)
+function requireLogin(file) {
+  return (req, res) => {
+    if (req.isAuthenticated && req.isAuthenticated()) {
+      return res.sendFile(path.join(publicDir, file));
+    }
+    res.redirect('/login.html');
+  };
+}
+app.get('/app.html', requireLogin('app.html'));
+app.get('/download.html', requireLogin('download.html'));
 app.use(express.static(publicDir, { index: 'index.html' }));
 
 // --- Pairing API -----------------------------------------------------------
