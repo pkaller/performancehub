@@ -21,7 +21,11 @@ jobs:
           - os: ubuntu-latest
             target: node22.23.1-linux-x64
             out: performancehub-agent-linux-x64
-          - os: macos-13 # Intel
+          # Intel macOS binary built on an ARM runner (macos-14): pkg fetches
+          # the prebuilt macos-x64 Node base, and Rosetta 2 (present on the
+          # runner) handles the x64 bytecode step. macos-13 (Intel) runners are
+          # scarce/slow and were blocking the whole release in the queue.
+          - os: macos-14
             target: node22.23.1-macos-x64
             out: performancehub-agent-macos-x64
           - os: macos-14 # Apple Silicon
