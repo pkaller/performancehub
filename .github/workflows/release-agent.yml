@@ -27,16 +27,12 @@ jobs:
         working-directory: agent
         run: npx @yao-pkg/pkg . --out-path dist
 
-      - name: Rename binaries to release asset names
+      # pkg names outputs by the target axes that differ (platform + arch here):
+      #   performancehub-agent-linux-x64, -macos-x64, -macos-arm64, -win-x64.exe
+      # These match the asset names the website's download page links to.
+      - name: List built binaries
         working-directory: agent/dist
-        run: |
-          ls -la
-          mv performancehub-agent-linux performancehub-agent-linux-x64 2>/dev/null || true
-          mv performancehub-agent-macos performancehub-agent-macos-x64 2>/dev/null || true
-          mv performancehub-agent-win.exe performancehub-agent-win-x64.exe 2>/dev/null || true
-          # pkg names multi-target outputs like performancehub-agent-<platform>[-arch]
-          # normalize whatever exists:
-          for f in *; do echo "asset: $f"; done
+        run: ls -la
 
       - name: Create / update release with binaries
         uses: softprops/action-gh-release@v2
