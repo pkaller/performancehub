@@ -98,9 +98,9 @@ function buildRtspUrl({ ip, username, password, path, port }) {
   return `rtsp://${auth}${ip}:${rp}${p.startsWith('/') ? '' : '/'}${p}`;
 }
 
-// Grabs a single JPEG frame from an RTSP stream and pipes it to `res`.
-// Requires ffmpeg on PATH. Returns true if it started, throws otherwise.
-function streamSnapshot(rtspUrl, res) {
+// Grabs a single JPEG frame from an RTSP stream and returns it as a Buffer.
+// Requires ffmpeg on PATH. Rejects with a helpful message otherwise.
+function captureSnapshot(rtspUrl) {
   return new Promise((resolve, reject) => {
     const ff = spawn('ffmpeg', [
       '-rtsp_transport', 'tcp',
@@ -111,47 +111,38 @@ function streamSnapshot(rtspUrl, res) {
       'pipe:1',
     ]);
 
-    let started = false;
+    const chunks = [];
     let stderr = '';
+    let done = false;
+    const finish = (err, buf) => {
+      if (done) return;
+      done = true;
+      if (err) reject(err);
+      else resolve(buf);
+    };
 
     ff.on('error', (err) => {
       if (err.code === 'ENOENT') {
-        reject(new Error('ffmpeg is not installed. Install ffmpeg to view camera snapshots.'));
+        finish(new Error('ffmpeg is not installed on the agent machine. Install ffmpeg to view camera snapshots.'));
       } else {
-        reject(err);
+        finish(err);
       }
     });
-
-    ff.stderr.on('data', (d) => {
-      stderr += d.toString();
-    });
-
-    ff.stdout.once('data', () => {
-      if (!started) {
-        started = true;
-        res.setHeader('Content-Type', 'image/jpeg');
-        res.setHeader('Cache-Control', 'no-store');
-      }
-    });
-
-    ff.stdout.pipe(res);
-
+    ff.stderr.on('data', (d) => (stderr += d.toString()));
+    ff.stdout.on('data', (c) => chunks.push(c));
     ff.on('close', (code) => {
-      if (!started && code !== 0) {
-        reject(new Error(`ffmpeg failed (code ${code}). ${stderr.split('\n').slice(-4).join(' ')}`));
-      } else {
-        resolve(true);
-      }
+      const buf = Buffer.concat(chunks);
+      if (buf.length > 0) return finish(null, buf);
+      finish(new Error(`ffmpeg produced no image (code ${code}). ${stderr.split('\n').slice(-3).join(' ').trim()}`));
     });
 
-    // Safety timeout.
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       try {
         ff.kill('SIGKILL');
-      } catch (_) {
-        /* ignore */
-      }
+      } catch (_) {}
+      finish(new Error('Snapshot timed out (camera unreachable or wrong credentials/path).'));
     }, 15000);
+    timer.unref();
   });
 }
 
@@ -161,6 +152,6 @@ module.exports = {
   setCastMuted,
   stepCastVolume,
   buildRtspUrl,
-  streamSnapshot,
+  captureSnapshot,
   castAvailable: () => !!getCastClient(),
 };

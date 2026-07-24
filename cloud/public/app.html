@@ -3,19 +3,40 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PerformanceHub · Network Devices</title>
+    <title>Dashboard · PerformanceHub</title>
     <link rel="stylesheet" href="/css/styles.css" />
   </head>
   <body>
     <header class="topbar">
       <div class="brand">📡 PerformanceHub</div>
       <div class="topbar-right">
+        <span id="agent-status" class="agent-status offline">No agent</span>
         <span id="scan-meta" class="scan-meta"></span>
-        <button id="scan-btn" class="btn btn-primary">Scan network</button>
+        <button id="scan-btn" class="btn btn-primary" disabled>Scan network</button>
         <div class="user" id="user"></div>
         <button id="logout" class="btn btn-ghost">Sign out</button>
       </div>
     </header>
+
+    <!-- Pairing / onboarding banner -->
+    <section id="pair-banner" class="pair-banner" hidden>
+      <div class="pair-inner">
+        <div>
+          <h3>Connect your network</h3>
+          <p>No local agent is connected yet. Install the agent and pair it to start scanning.</p>
+        </div>
+        <div class="pair-actions">
+          <a class="btn" href="/download.html">Download agent</a>
+          <button id="pair-btn" class="btn btn-primary">Pair a new agent</button>
+        </div>
+      </div>
+      <div id="pair-code-box" class="pair-code-box" hidden>
+        <p>Run the agent with this code (valid ~10 min):</p>
+        <div class="pair-code" id="pair-code">————</div>
+        <pre><code id="pair-cmd">./performancehub-agent --pair ————</code></pre>
+        <p class="hint">Waiting for the agent to connect… this updates automatically.</p>
+      </div>
+    </section>
 
     <div id="progress" class="progress" hidden>
       <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
@@ -24,8 +45,8 @@
 
     <main class="content">
       <div id="empty" class="empty">
-        <h2>No scan yet</h2>
-        <p>Click <strong>Scan network</strong> to discover the devices on your LAN.</p>
+        <h2>Ready to scan</h2>
+        <p>Your agent is connected. Click <strong>Scan network</strong> to discover devices.</p>
       </div>
       <div id="devices" class="device-grid"></div>
     </main>
@@ -39,16 +60,14 @@
         </div>
         <p class="modal-hint">
           Most IP cameras need credentials and a stream path. Enter them, then Connect.
-          Snapshots require <code>ffmpeg</code> installed on the server.
+          Live view requires <code>ffmpeg</code> on the agent machine.
         </p>
         <div class="form-row">
           <label>Username <input id="cam-user" placeholder="admin" /></label>
           <label>Password <input id="cam-pass" type="password" /></label>
         </div>
         <div class="form-row">
-          <label class="grow">Stream path
-            <input id="cam-path" placeholder="/Streaming/Channels/101" />
-          </label>
+          <label class="grow">Stream path <input id="cam-path" placeholder="/Streaming/Channels/101" /></label>
           <label>Port <input id="cam-port" value="554" /></label>
         </div>
         <div class="cam-view">
@@ -63,7 +82,6 @@
     </div>
 
     <div id="toast" class="toast" hidden></div>
-
     <script src="/js/app.js"></script>
   </body>
 </html>

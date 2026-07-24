@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Download the agent · PerformanceHub</title>
+    <link rel="stylesheet" href="/css/styles.css" />
+  </head>
+  <body class="landing">
+    <header class="nav">
+      <div class="brand"><a href="/">📡 PerformanceHub</a></div>
+      <nav><a class="btn btn-primary btn-sm" href="/app.html">Open dashboard</a></nav>
+    </header>
+
+    <main class="hero narrow">
+      <h1>Install the local agent</h1>
+      <p class="lede">
+        The agent runs on any always-on machine on your home network (a laptop, a
+        mini-PC, a Raspberry Pi). It scans your LAN and relays to this website. No
+        Node.js required — these are standalone binaries.
+      </p>
+
+      <div id="primary-download" class="download-primary"></div>
+
+      <div class="download-grid" id="download-grid"></div>
+
+      <section class="run-steps">
+        <h2>After downloading</h2>
+        <ol>
+          <li><strong>Sign in</strong> to the <a href="/app.html">dashboard</a> and click <em>“Pair a new agent”</em> to get an 8-character code.</li>
+          <li>
+            <strong>Run the agent</strong> with that code:
+            <pre><code id="run-cmd">./performancehub-agent --server THIS-SITE --pair XXXX-XXXX</code></pre>
+            <span class="hint">On macOS you may need to allow it in <em>System Settings → Privacy &amp; Security</em>. On Windows, click “More info → Run anyway” if SmartScreen prompts.</span>
+          </li>
+          <li>The agent saves its pairing and reconnects automatically after that — just run it (no code needed) or install it as a service.</li>
+        </ol>
+        <p class="hint">
+          Prefer to run from source instead of a binary? See the
+          <a id="repo-link" href="#">agent/ folder in the repo</a>.
+        </p>
+      </section>
+    </main>
+
+    <footer class="foot">PerformanceHub</footer>
+
+    <script src="/js/download.js"></script>
+  </body>
+</html>

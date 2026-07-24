@@ -1,134 +1,132 @@
 # PerformanceHub
 
-A small self-hosted web app that logs you in with **Google**, **scans your local
-network** for devices, lists them, and exposes **actions** per device — adjust
-volume on Google Cast speakers, view an IP camera's video feed, open a device's
-web UI, and more.
-
-## How it works (and an important limitation)
-
-A web page in a browser **cannot** scan your local network — browsers block raw
-ping/ARP/port access for security, and a site hosted in the cloud has no route
-into your home LAN anyway. So PerformanceHub ships as a **tiny local server** you
-run on a machine that's on your network (your laptop, a Raspberry Pi, a NAS…).
-
-- The **Node.js backend** does the scanning and talks to devices.
-- The backend serves a **web UI** you open in a browser and sign into with Google.
-- Because the backend is on your LAN, it can actually see and control your devices.
+A **real, hosted website** where you sign in with Google and see & control every
+device on your home network — from anywhere. The website offers a **downloadable
+local agent** (prebuilt binary, no Node.js needed) that runs on your LAN, does
+the scanning, and relays to your browser over a secure outbound connection.
 
 ```
-Browser (you)  ──Google login──►  PerformanceHub backend (on your LAN)  ──►  Devices
+Your browser (anywhere) ──HTTPS/WSS──►  Cloud website (Render)  ◄──WSS── Local agent (your LAN) ──► your devices
+                            Google login        relay                   scan · volume · cameras
 ```
 
-## Requirements
+Why an agent? A website can't reach inside your home network — browsers and
+cloud servers have no route to your LAN. The agent runs where your devices are
+and **dials out** to the site, so there are no router ports to open.
 
-- **Node.js 18+**
-- A **Google OAuth client** (free — steps below)
-- Optional: **`castv2-client`** npm package for Google Cast volume control (`npm install castv2-client`)
-- Optional: **`ffmpeg`** on your PATH for IP-camera snapshots
+## Repo layout
 
-## Setup
+```
+cloud/    The hosted website: Google OAuth, landing/download/dashboard pages,
+          and the WebSocket relay that connects browsers to agents. Deploys to Render.
+agent/    The local agent: LAN scanner (ping/ARP/mDNS/port-probe), Google Cast
+          volume control, RTSP camera snapshots. Built into standalone binaries.
+.github/workflows/release-agent.yml
+          CI that builds agent binaries (Win/macOS/Linux) and attaches them to
+          GitHub Releases — the website's Download page links straight to them.
+render.yaml
+          One-click-ish Render Blueprint for the cloud site.
+```
 
-### 1. Install
+## Deploy the website (Render)
+
+1. **Google OAuth credentials** — at
+   [console.cloud.google.com/apis/credentials](https://console.cloud.google.com/apis/credentials)
+   create an **OAuth client ID → Web application**. You'll add the redirect URI
+   after you know your Render URL (step 3).
+2. **Render** — [dashboard.render.com](https://dashboard.render.com) → **New →
+   Blueprint** → connect this repo. Render reads `render.yaml` and creates the
+   service.
+3. Note your URL (e.g. `https://performancehub.onrender.com`), then set the
+   remaining env vars in the Render dashboard:
+   - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
+   - `ALLOWED_EMAILS` — comma-separated Google accounts allowed to sign in.
+     **Set this**; it's what stops strangers from controlling your LAN.
+   - `BASE_URL` — your full Render URL.
+4. Back in Google Console, add the redirect URI:
+   `https://YOUR-APP.onrender.com/auth/google/callback`
+5. Redeploy. Your site is live.
+
+> Free-tier note: Render free services sleep after idle. First load takes ~30s
+> to wake, and the agent auto-reconnects when it does. Paid tier removes this.
+
+## Publish agent binaries
+
+Tag a release — CI builds Windows/macOS(x64+arm64)/Linux binaries with
+[`@yao-pkg/pkg`](https://github.com/yao-pkg/pkg) and attaches them:
 
 ```bash
-npm install
+git tag v1.0.0 && git push origin v1.0.0
 ```
 
-### 2. Create Google OAuth credentials
+The site's **Download** page auto-detects the visitor's OS and links to
+`releases/latest` assets. (You can also trigger the workflow manually from the
+Actions tab.)
 
-1. Go to <https://console.cloud.google.com/apis/credentials>.
-2. Create (or pick) a project → **Create Credentials → OAuth client ID**.
-3. Application type: **Web application**.
-4. Under **Authorized redirect URIs**, add:
-   `http://localhost:3000/auth/google/callback`
-5. Copy the **Client ID** and **Client secret**.
+## Use it
 
-### 3. Configure
+1. Open your site → **Sign in with Google**.
+2. Dashboard shows "No agent" → click **Pair a new agent** → you get a code like
+   `K7PM-Q2XW` (valid 10 min, single use).
+3. On a machine on your home network, run the downloaded binary:
+   ```bash
+   ./performancehub-agent --server https://YOUR-APP.onrender.com --pair K7PM-Q2XW
+   ```
+4. The agent pairs, stores a durable token in `~/.performancehub/agent.json`,
+   and from then on just run it with no arguments (or install it as a
+   service/startup item). The dashboard flips to **agent online**.
+5. Click **Scan network** — devices appear with live progress, and each shows
+   the actions it supports.
 
-```bash
-cp .env.example .env
-```
+## Actions per device
 
-Edit `.env`:
-
-- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` — from step 2.
-- `ALLOWED_EMAILS` — comma-separated Google accounts allowed in. **Set this** —
-  otherwise anyone with a Google account can reach the controls for your LAN.
-- `SESSION_SECRET` — any long random string.
-- `SCAN_CIDR` — optional; leave blank to auto-detect (e.g. `192.168.1.0/24`).
-
-### 4. Run
-
-```bash
-npm start
-```
-
-Open <http://localhost:3000>, sign in with Google, and click **Scan network**.
-
-## What the scanner finds
-
-For each host it discovers via **ping sweep + ARP + reverse-DNS + mDNS/Bonjour +
-port probing**, you get:
-
-- IP, MAC, and a best-effort **vendor** (from the MAC prefix)
-- Hostname / mDNS friendly name
-- Open service ports (SSH, HTTP/S, RTSP, Google Cast, IPP, Plex…)
-- An inferred **device type** and matching **actions**
-
-## Actions & what they need
-
-| Action | Shown for | Requires |
+| Action | Shown for | Notes |
 | --- | --- | --- |
-| **Volume up/down/mute/slider** | Google Cast / Google speakers (port 8009 or `_googlecast._tcp`) | opt-in: `npm install castv2-client` |
-| **Video feed** | IP cameras (RTSP port 554, or known camera vendor) | `ffmpeg` on PATH + camera credentials/stream path |
-| **Open web UI** | Anything serving HTTP/HTTPS | — |
-| **SSH** | Hosts with port 22 | copies an `ssh` command |
-| **Printer admin** | IPP printers (port 631) | — |
+| Volume slider / up / down / mute | Google Cast speakers, Chromecasts, Google/Nest speakers | works out of the box |
+| Video feed (snapshot + auto-refresh live view) | IP cameras (RTSP / known camera vendors) | needs `ffmpeg` on the agent machine + camera credentials |
+| Open web UI | anything serving HTTP/HTTPS | opens the device's own page |
+| SSH | hosts with port 22 | copies an ssh command |
+| Printer admin | IPP printers | opens the printer's admin page |
 
-Volume control targets **Google Cast** devices specifically — that's the natural
-pairing with Google sign-in and works without any device-side setup. Camera feeds
-work over standard **RTSP**; most cameras need a username/password and a
-vendor-specific stream path (the UI pre-fills common ones for Hikvision/Dahua).
+Actions are capability-gated: a device only shows what the scan proved it
+supports.
 
-Actions are **capability-gated**: a device only shows the controls it actually
-supports based on what the scan detected. A device that exposes no recognized
-service simply lists its details with no action buttons.
+## Security model
 
-## Security notes
+- **Login**: Google OAuth; only `ALLOWED_EMAILS` accounts get in (enforced
+  server-side).
+- **Pairing**: one-time, short-lived codes bind an agent to *your* account; the
+  agent then holds an HMAC-signed token. Tokens are stateless, so the relay
+  needs no database and survives redeploys.
+- **Isolation**: the relay routes messages strictly within one user's account —
+  your browser can only ever reach *your* agents.
+- **No inbound exposure**: the agent only dials out (WSS). No port forwarding,
+  no holes in your firewall.
+- **Camera credentials** are sent per-request from your browser through the
+  relay to the agent and are not stored anywhere.
 
-- The dashboard and all `/api/*` routes require a signed-in, allow-listed Google
-  account. The allow-list is enforced server-side in `server/auth.js`.
-- Session cookies are `httpOnly` + `sameSite=lax`. If you expose this beyond
-  `localhost`, put it behind HTTPS and set the cookie `secure` flag in
-  `server/index.js`.
-- Camera credentials are passed per-request and never stored on disk.
-- Keep this on your trusted LAN. It is a personal tool, not a hardened
-  multi-tenant service.
+## Local development
 
-## Project layout
+```bash
+# Terminal 1 — the cloud site
+cd cloud && npm install
+cp ../.env.example .env   # fill in Google credentials; BASE_URL=http://localhost:3000
+npm start
 
-```
-server/
-  index.js     Express app, session, API routes
-  auth.js      Google OAuth (passport) + allow-list + guards
-  scanner.js   Ping sweep, ARP, reverse-DNS, mDNS, port probing, inference
-  devices.js   Cast volume control + RTSP snapshot via ffmpeg
-  oui.js       Offline MAC-prefix → vendor lookup
-public/
-  login.html   Google sign-in page
-  index.html   Device dashboard
-  js/app.js     Frontend logic
-  css/styles.css
+# Terminal 2 — the agent (from source; binaries are for end users)
+cd agent && npm install
+node agent.js --server http://localhost:3000 --pair CODE-FROM-DASHBOARD
 ```
 
 ## Troubleshooting
 
-- **"Scan finds nothing / few devices"** — some OSes need elevated privileges for
-  `ping`/`arp`, and some devices ignore ping. Try running with more permissions,
-  or set `SCAN_CIDR` explicitly. Devices asleep may not respond.
-- **Volume control says it needs castv2-client** — run `npm install castv2-client`.
-- **Camera snapshot fails** — install `ffmpeg`, and double-check the username,
-  password, and stream path for your camera model.
-- **Google login loops / "redirect_uri_mismatch"** — the redirect URI in Google
-  Console must exactly match `BASE_URL` + `/auth/google/callback`.
+- **"redirect_uri_mismatch"** — the URI in Google Console must exactly match
+  `BASE_URL` + `/auth/google/callback`.
+- **Agent says pairing code invalid** — codes expire in 10 min and are single
+  use; generate a fresh one.
+- **Scan finds little** — the agent machine may need elevated privileges for
+  ping/ARP on some OSes; sleeping devices don't respond. Set `SCAN_CIDR`
+  (env var on the agent) to force a range.
+- **macOS blocks the binary** — System Settings → Privacy & Security → *Open
+  anyway* (binaries are unsigned).
+- **Windows SmartScreen** — "More info → Run anyway".

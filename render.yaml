@@ -1,0 +1,29 @@
+# Render Blueprint — deploys the PerformanceHub cloud website.
+# In the Render dashboard: New → Blueprint → point it at this repo.
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: performancehub
+    runtime: node
+    plan: free
+    rootDir: cloud
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /login.html
+    envVars:
+      - key: GOOGLE_CLIENT_ID
+        sync: false # set in the Render dashboard
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false # set in the Render dashboard
+      - key: ALLOWED_EMAILS
+        sync: false # e.g. you@gmail.com
+      - key: BASE_URL
+        sync: false # e.g. https://performancehub.onrender.com (your Render URL)
+      - key: GITHUB_REPO
+        value: pkaller/performancehub
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: RELAY_SECRET
+        generateValue: true

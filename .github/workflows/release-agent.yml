@@ -1,0 +1,47 @@
+name: Build & release agent binaries
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install agent dependencies
+        working-directory: agent
+        run: npm install
+
+      - name: Build binaries with pkg
+        working-directory: agent
+        run: npx @yao-pkg/pkg . --out-path dist
+
+      - name: Rename binaries to release asset names
+        working-directory: agent/dist
+        run: |
+          ls -la
+          mv performancehub-agent-linux performancehub-agent-linux-x64 2>/dev/null || true
+          mv performancehub-agent-macos performancehub-agent-macos-x64 2>/dev/null || true
+          mv performancehub-agent-win.exe performancehub-agent-win-x64.exe 2>/dev/null || true
+          # pkg names multi-target outputs like performancehub-agent-<platform>[-arch]
+          # normalize whatever exists:
+          for f in *; do echo "asset: $f"; done
+
+      - name: Create / update release with binaries
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'latest-dev' }}
+          files: agent/dist/*
+          fail_on_unmatched_files: false
+          generate_release_notes: true
