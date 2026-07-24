@@ -63,7 +63,7 @@ app.get('/api/config', (req, res) => {
 });
 
 function publicWsUrl(req) {
-  const base = process.env.BASE_URL || `${req.protocol}://${req.get('host')}`;
+  const base = (process.env.BASE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/+$/, '');
   return base.replace(/^http/, 'ws');
 }
 

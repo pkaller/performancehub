@@ -19,7 +19,8 @@ function isEmailAllowed(email) {
 function configurePassport() {
   const clientID = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
+  // Strip any trailing slash so we never build "...com//auth/google/callback".
+  const baseUrl = (process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`).replace(/\/+$/, '');
 
   if (!clientID || !clientSecret) {
     console.warn('[auth] GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET are not set — login will not work.');
