@@ -12,6 +12,10 @@
   --radius: 14px;
 }
 * { box-sizing: border-box; }
+/* The [hidden] attribute must always win over any display rule below
+   (e.g. .modal { display: grid } / .progress { display: flex }), otherwise
+   JS-toggled elements like the camera modal show on page load. */
+[hidden] { display: none !important; }
 body {
   margin: 0;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
