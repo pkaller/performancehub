@@ -19,16 +19,16 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            target: node20-linux-x64
+            target: node22.23.1-linux-x64
             out: performancehub-agent-linux-x64
           - os: macos-13 # Intel
-            target: node20-macos-x64
+            target: node22.23.1-macos-x64
             out: performancehub-agent-macos-x64
           - os: macos-14 # Apple Silicon
-            target: node20-macos-arm64
+            target: node22.23.1-macos-arm64
             out: performancehub-agent-macos-arm64
           - os: windows-latest
-            target: node20-win-x64
+            target: node22.23.1-win-x64
             out: performancehub-agent-win-x64.exe
     runs-on: ${{ matrix.os }}
     steps:
