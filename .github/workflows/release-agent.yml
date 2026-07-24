@@ -10,8 +10,27 @@ permissions:
   contents: write
 
 jobs:
+  # Build each binary on its OWN native runner. pkg cannot reliably
+  # cross-compile macOS/Windows binaries from a Linux host, so we build
+  # macOS on macOS, Windows on Windows, Linux on Linux.
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: node20-linux-x64
+            out: performancehub-agent-linux-x64
+          - os: macos-13 # Intel
+            target: node20-macos-x64
+            out: performancehub-agent-macos-x64
+          - os: macos-14 # Apple Silicon
+            target: node20-macos-arm64
+            out: performancehub-agent-macos-arm64
+          - os: windows-latest
+            target: node20-win-x64
+            out: performancehub-agent-win-x64.exe
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
@@ -23,21 +42,38 @@ jobs:
         working-directory: agent
         run: npm install
 
-      - name: Build binaries with pkg
+      - name: Build binary with pkg
         working-directory: agent
-        run: npx @yao-pkg/pkg . --out-path dist
+        run: npx @yao-pkg/pkg . --targets ${{ matrix.target }} --output dist/${{ matrix.out }}
 
-      # pkg names outputs by the target axes that differ (platform + arch here):
-      #   performancehub-agent-linux-x64, -macos-x64, -macos-arm64, -win-x64.exe
-      # These match the asset names the website's download page links to.
-      - name: List built binaries
-        working-directory: agent/dist
-        run: ls -la
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.out }}
+          path: agent/dist/${{ matrix.out }}
+          if-no-files-found: error
 
-      - name: Create / update release with binaries
+  # Collect all binaries and publish a single release with them attached.
+  # Runs even if some platform legs failed, so a hiccup on one OS never
+  # blocks publishing the binaries that did build.
+  release:
+    needs: build
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: List binaries
+        run: ls -la dist
+
+      - name: Create / update release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'latest-dev' }}
-          files: agent/dist/*
+          files: dist/*
           fail_on_unmatched_files: false
           generate_release_notes: true
