@@ -12,6 +12,7 @@
       <div class="topbar-right">
         <span id="agent-status" class="agent-status offline">No agent</span>
         <span id="scan-meta" class="scan-meta"></span>
+        <button id="camera-btn" class="btn" disabled>📹 Camera feed</button>
         <button id="scan-btn" class="btn btn-primary" disabled>Scan network</button>
         <div class="user" id="user"></div>
         <button id="logout" class="btn btn-ghost">Sign out</button>
@@ -76,16 +77,20 @@
           <button class="btn btn-ghost" data-close-modal>✕</button>
         </div>
         <p class="modal-hint">
-          Most IP cameras need credentials and a stream path. Enter them, then Connect.
-          Live view requires <code>ffmpeg</code> on the agent machine.
+          Point this at any camera by IP. Most IP cameras need credentials and a
+          stream path. Enter them, then Connect. Live view requires
+          <code>ffmpeg</code> on the agent machine (<code>brew install ffmpeg</code>).
         </p>
+        <div class="form-row">
+          <label class="grow">Camera IP <input id="cam-ip" placeholder="192.168.1.64" /></label>
+          <label>Port <input id="cam-port" value="554" /></label>
+        </div>
         <div class="form-row">
           <label>Username <input id="cam-user" placeholder="admin" /></label>
           <label>Password <input id="cam-pass" type="password" /></label>
         </div>
         <div class="form-row">
           <label class="grow">Stream path <input id="cam-path" placeholder="/Streaming/Channels/101" /></label>
-          <label>Port <input id="cam-port" value="554" /></label>
         </div>
         <div class="cam-view">
           <img id="cam-img" alt="camera snapshot" />

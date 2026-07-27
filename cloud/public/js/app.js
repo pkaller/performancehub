@@ -198,6 +198,7 @@ function onAgents(list) {
   statusEl.textContent = online ? `${list.length} agent${list.length > 1 ? 's' : ''} online` : 'No agent';
   statusEl.className = 'agent-status ' + (online ? 'online' : 'offline');
   document.getElementById('scan-btn').disabled = !online;
+  document.getElementById('camera-btn').disabled = !online;
   document.getElementById('pair-banner').hidden = online;
   document.getElementById('empty').hidden = !(online && state.devices.length === 0);
 
@@ -375,17 +376,35 @@ function wireCameraModal() {
   });
   document.getElementById('cam-connect').addEventListener('click', connectCamera);
   document.getElementById('cam-live').addEventListener('change', (e) => (e.target.checked ? startLive() : stopLive()));
+  document.getElementById('camera-btn').addEventListener('click', () => openManualCamera());
 }
-function openCamera(d) {
-  state.currentCamera = d;
-  document.getElementById('camera-title').textContent = `Video feed — ${d.name}`;
+function resetCameraModal(title) {
+  document.getElementById('camera-title').textContent = title;
   document.getElementById('cam-status').textContent = 'Not connected';
   document.getElementById('cam-img').removeAttribute('src');
   document.getElementById('cam-live').checked = false;
+  stopLive();
+  document.getElementById('camera-modal').hidden = false;
+}
+// Opens the feed for a specific detected device.
+function openCamera(d) {
+  state.currentCamera = d;
+  resetCameraModal(`Video feed — ${d.name}`);
+  document.getElementById('cam-ip').value = d.ip;
   const path = document.getElementById('cam-path');
   if (/hikvision/i.test(d.vendor || '')) path.value = '/Streaming/Channels/101';
   else if (/dahua|amcrest/i.test(d.vendor || '')) path.value = '/cam/realmonitor?channel=1&subtype=0';
-  document.getElementById('camera-modal').hidden = false;
+}
+// Opens the feed with an editable IP — for cameras the scan didn't flag.
+function openManualCamera() {
+  state.currentCamera = null;
+  resetCameraModal('Open a camera feed');
+  const ipField = document.getElementById('cam-ip');
+  // Prefill with this LAN's prefix as a hint (e.g. 192.168.1.) when we know it.
+  if (!ipField.value && state.devices[0]) {
+    ipField.value = state.devices[0].ip.replace(/\.\d+$/, '.');
+  }
+  ipField.focus();
 }
 function closeCamera() {
   stopLive();
@@ -393,11 +412,15 @@ function closeCamera() {
   state.currentCamera = null;
 }
 function connectCamera() {
-  const d = state.currentCamera;
   const status = document.getElementById('cam-status');
   const img = document.getElementById('cam-img');
+  const ip = document.getElementById('cam-ip').value.trim();
+  if (!ip) {
+    status.textContent = 'Enter the camera IP address first.';
+    return;
+  }
   status.textContent = 'Connecting…';
-  sendAction('snapshot', d.ip, {
+  sendAction('snapshot', ip, {
     username: document.getElementById('cam-user').value,
     password: document.getElementById('cam-pass').value,
     path: document.getElementById('cam-path').value,
