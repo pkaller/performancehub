@@ -5,7 +5,7 @@ require('dotenv').config();
 const path = require('path');
 const http = require('http');
 const express = require('express');
-const session = require('express-session');
+const cookieSession = require('cookie-session');
 const passport = require('passport');
 
 const { configurePassport, registerAuthRoutes, ensureAuth } = require('./auth');
@@ -19,18 +19,30 @@ const app = express();
 app.set('trust proxy', 1);
 app.use(express.json());
 
-const sessionMiddleware = session({
-  secret: process.env.SESSION_SECRET || 'insecure-dev-secret-change-me',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.COOKIE_SECURE === 'true', // set true behind HTTPS (e.g. on Render)
-    maxAge: 1000 * 60 * 60 * 24 * 7,
-  },
+// Stateless, cookie-backed sessions: the (signed) session lives in the user's
+// cookie, not in server memory — so logins survive server restarts and Render
+// free-tier cold starts. No session store to lose on redeploy.
+const sessionMiddleware = cookieSession({
+  name: 'ph_sess',
+  keys: [process.env.SESSION_SECRET || 'insecure-dev-secret-change-me'],
+  maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
+  httpOnly: true,
+  sameSite: 'lax',
+  secure: process.env.COOKIE_SECURE === 'true', // true behind HTTPS (Render)
 });
 app.use(sessionMiddleware);
+
+// Passport 0.6+ calls req.session.regenerate/save on login; cookie-session
+// has neither, so provide no-op shims (the cookie is the whole session).
+app.use((req, res, next) => {
+  if (req.session && typeof req.session.regenerate !== 'function') {
+    req.session.regenerate = (cb) => cb && cb();
+  }
+  if (req.session && typeof req.session.save !== 'function') {
+    req.session.save = (cb) => cb && cb();
+  }
+  next();
+});
 
 configurePassport();
 app.use(passport.initialize());
